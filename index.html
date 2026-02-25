@@ -1,0 +1,943 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Comet Coin — Modern Crypto Landing (Demo)</title>
+  <meta name="description" content="A modern crypto landing page demo with animations + a live price tracker (simulated by default)."/>
+  <style>
+    :root{
+      --bg:#05060a;
+      --panel:rgba(255,255,255,.06);
+      --panel2:rgba(255,255,255,.09);
+      --text:rgba(255,255,255,.92);
+      --muted:rgba(255,255,255,.65);
+      --line:rgba(255,255,255,.10);
+      --glow:rgba(255,255,255,.18);
+      --shadow: 0 20px 60px rgba(0,0,0,.55);
+      --radius: 18px;
+      --radius2: 26px;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      color:var(--text);
+      background: radial-gradient(1200px 600px at 70% 0%, rgba(255,255,255,.08), transparent 60%),
+                  radial-gradient(900px 500px at 10% 20%, rgba(255,255,255,.06), transparent 55%),
+                  var(--bg);
+      overflow-x:hidden;
+    }
+
+    /* Star canvas sits behind everything */
+    #stars{
+      position:fixed;
+      inset:0;
+      width:100%;
+      height:100%;
+      z-index:-2;
+    }
+
+    /* Subtle grain */
+    .grain{
+      position:fixed;
+      inset:-60px;
+      z-index:-1;
+      pointer-events:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E");
+      opacity:.06;
+      mix-blend-mode:overlay;
+      transform:translateZ(0);
+    }
+
+    /* Layout */
+    .wrap{max-width:1120px; margin:0 auto; padding:22px 18px 80px;}
+    header{
+      position:sticky;
+      top:0;
+      z-index:30;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      background: linear-gradient(to bottom, rgba(5,6,10,.72), rgba(5,6,10,.28));
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+    .nav{
+      max-width:1120px;
+      margin:0 auto;
+      padding:14px 18px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px; min-width:220px;
+      text-decoration:none; color:var(--text);
+    }
+    .mark{
+      width:34px; height:34px; border-radius:12px;
+      background: rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.12);
+      display:grid; place-items:center;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      position:relative;
+      overflow:hidden;
+    }
+    .mark:before{
+      content:"";
+      position:absolute;
+      width:140%;
+      height:140%;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.22), transparent 55%);
+      transform:rotate(18deg);
+    }
+    .brand b{letter-spacing:.2px}
+    .brand small{display:block; color:var(--muted); font-size:12px; margin-top:2px}
+
+    .navlinks{
+      display:flex; gap:14px; flex-wrap:wrap;
+      justify-content:center;
+    }
+    .navlinks a{
+      text-decoration:none;
+      color:var(--muted);
+      font-size:13px;
+      padding:9px 10px;
+      border-radius:12px;
+      border:1px solid transparent;
+      transition: .2s ease;
+    }
+    .navlinks a:hover{
+      color:var(--text);
+      border-color:rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+    }
+    .ctaRow{display:flex; gap:10px; align-items:center;}
+    .btn{
+      cursor:pointer;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:14px;
+      font-weight:650;
+      font-size:13px;
+      transition: .2s ease;
+      box-shadow: 0 12px 30px rgba(0,0,0,.35);
+    }
+    .btn:hover{transform: translateY(-1px); background: rgba(255,255,255,.09);}
+    .btn.primary{
+      background: rgba(255,255,255,.92);
+      color:#06070b;
+      border-color: rgba(255,255,255,.8);
+    }
+    .btn.primary:hover{background:white}
+
+    /* Hero */
+    .hero{
+      padding:54px 0 26px;
+      display:grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap:22px;
+      align-items:stretch;
+    }
+    @media (max-width: 920px){
+      .hero{grid-template-columns:1fr; padding-top:34px;}
+      .brand{min-width:auto}
+    }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.04));
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: var(--radius2);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      position:relative;
+    }
+    .card:before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background: radial-gradient(1000px 500px at 10% 0%, rgba(255,255,255,.10), transparent 60%),
+                  radial-gradient(900px 500px at 90% 30%, rgba(255,255,255,.08), transparent 55%);
+      pointer-events:none;
+      opacity:.9;
+    }
+    .heroMain{padding:28px; min-height:360px;}
+    .kicker{
+      display:inline-flex;
+      gap:10px;
+      align-items:center;
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      color:rgba(255,255,255,.82);
+      font-size:12px;
+      position:relative;
+      z-index:1;
+    }
+    .kdot{
+      width:8px; height:8px; border-radius:99px;
+      background: rgba(255,255,255,.82);
+      box-shadow: 0 0 0 6px rgba(255,255,255,.10);
+      animation: pulse 1.6s infinite ease-in-out;
+    }
+    @keyframes pulse{
+      0%,100%{transform:scale(1); opacity:.9}
+      50%{transform:scale(1.18); opacity:.55}
+    }
+
+    h1{
+      margin:16px 0 10px;
+      font-size: clamp(36px, 5vw, 56px);
+      line-height:1.02;
+      letter-spacing:-.9px;
+      position:relative;
+      z-index:1;
+    }
+    .sub{
+      margin:0;
+      color:var(--muted);
+      font-size:16px;
+      line-height:1.55;
+      max-width:62ch;
+      position:relative;
+      z-index:1;
+    }
+    .heroActions{
+      margin-top:18px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      position:relative;
+      z-index:1;
+    }
+    .hint{
+      color:rgba(255,255,255,.58);
+      font-size:12px;
+      margin-top:12px;
+      position:relative;
+      z-index:1;
+    }
+
+    /* Animated comet */
+    .comet{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      opacity:.95;
+      z-index:0;
+      filter: drop-shadow(0 20px 40px rgba(255,255,255,.08));
+    }
+    .comet svg{
+      position:absolute;
+      right:-40px;
+      top:20px;
+      width:420px;
+      height:260px;
+      opacity:.55;
+      transform: rotate(12deg);
+    }
+    .trail{
+      animation: drift 6.2s ease-in-out infinite;
+      transform-origin: 60% 50%;
+    }
+    @keyframes drift{
+      0%,100%{transform:translate(0,0) rotate(0deg)}
+      50%{transform:translate(-18px, 10px) rotate(-2deg)}
+    }
+
+    /* Price panel */
+    .side{padding:20px; display:flex; flex-direction:column; gap:14px;}
+    .metric{
+      background: rgba(0,0,0,.18);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: var(--radius);
+      padding:14px;
+      position:relative;
+      overflow:hidden;
+    }
+    .metric h3{margin:0 0 6px; font-size:12px; color:rgba(255,255,255,.70); font-weight:700; letter-spacing:.3px; text-transform:uppercase}
+    .row{display:flex; align-items:baseline; justify-content:space-between; gap:10px;}
+    .price{
+      font-size:34px;
+      letter-spacing:-.6px;
+      font-weight:820;
+    }
+    .chg{
+      font-weight:750;
+      font-size:13px;
+      padding:6px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+    }
+    .chg.up{background: rgba(255,255,255,.12)}
+    .chg.down{background: rgba(255,255,255,.03)}
+    .mini{
+      margin-top:10px;
+      height:78px;
+      border-radius: 14px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+      overflow:hidden;
+    }
+    .mini canvas{width:100%; height:100%; display:block}
+
+    .pillRow{display:flex; gap:10px; flex-wrap:wrap;}
+    .pill{
+      flex:1 1 120px;
+      background: rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: 16px;
+      padding:12px;
+      min-width:120px;
+    }
+    .pill b{display:block; font-size:14px}
+    .pill span{display:block; margin-top:4px; color:var(--muted); font-size:12px}
+
+    .switch{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:12px 12px;
+      background: rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: 16px;
+      color:rgba(255,255,255,.80);
+      font-size:12px;
+    }
+    .toggle{
+      width:48px; height:28px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      position:relative;
+      cursor:pointer;
+      flex:0 0 auto;
+    }
+    .toggle:before{
+      content:"";
+      position:absolute;
+      top:50%;
+      left:4px;
+      width:20px; height:20px;
+      border-radius:999px;
+      background: rgba(255,255,255,.92);
+      transform:translateY(-50%);
+      transition:.22s ease;
+    }
+    .toggle.on{
+      background: rgba(255,255,255,.14);
+    }
+    .toggle.on:before{left:24px}
+
+    /* Sections */
+    section{padding:18px 0}
+    .grid3{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:14px;
+    }
+    @media (max-width: 920px){
+      .grid3{grid-template-columns:1fr}
+    }
+    .feature{
+      padding:18px;
+      border-radius: var(--radius2);
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      position:relative;
+      overflow:hidden;
+      transform: translateY(14px);
+      opacity:0;
+      transition: .6s ease;
+    }
+    .feature.show{transform: translateY(0); opacity:1;}
+    .feature:before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background: radial-gradient(700px 200px at 15% 0%, rgba(255,255,255,.10), transparent 60%);
+      opacity:.65;
+      pointer-events:none;
+    }
+    .feature h4{margin:0 0 6px; font-size:16px}
+    .feature p{margin:0; color:var(--muted); line-height:1.55; font-size:13px}
+    .tag{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      margin-bottom:10px;
+      padding:7px 10px;
+      border-radius: 999px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      color:rgba(255,255,255,.75);
+      font-size:11px;
+      letter-spacing:.3px;
+      text-transform:uppercase;
+      position:relative;
+      z-index:1;
+    }
+    .diamond{
+      width:8px; height:8px; background: rgba(255,255,255,.85);
+      transform:rotate(45deg);
+      border-radius:2px;
+      box-shadow: 0 0 0 6px rgba(255,255,255,.10);
+    }
+
+    /* Footer */
+    footer{
+      padding-top:18px;
+      color:rgba(255,255,255,.55);
+      font-size:12px;
+      line-height:1.55;
+      border-top:1px solid rgba(255,255,255,.08);
+      margin-top:30px;
+    }
+
+    /* Toast */
+    .toast{
+      position:fixed;
+      bottom:18px;
+      left:50%;
+      transform:translateX(-50%) translateY(20px);
+      background: rgba(10,11,15,.72);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius: 14px;
+      padding:10px 12px;
+      font-size:12px;
+      color:rgba(255,255,255,.80);
+      box-shadow: 0 20px 60px rgba(0,0,0,.55);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      opacity:0;
+      pointer-events:none;
+      transition:.25s ease;
+      z-index:999;
+      max-width:min(520px, calc(100vw - 24px));
+    }
+    .toast.show{
+      opacity:1;
+      transform:translateX(-50%) translateY(0);
+    }
+
+    /* Reduce motion */
+    @media (prefers-reduced-motion: reduce){
+      *{animation:none !important; transition:none !important; scroll-behavior:auto !important;}
+    }
+  </style>
+</head>
+<body>
+  <canvas id="stars"></canvas>
+  <div class="grain"></div>
+
+  <header>
+    <div class="nav">
+      <a class="brand" href="#top">
+        <div class="mark" aria-hidden="true">
+          <!-- tiny comet icon -->
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M21 12c0 4.97-4.03 9-9 9S3 16.97 3 12 7.03 3 12 3c2.56 0 4.87 1.06 6.52 2.77" stroke="rgba(255,255,255,.92)" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M15.5 6.2 21 3l-3.2 5.5" stroke="rgba(255,255,255,.92)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M7.2 13.1c2.4-1.7 5.8-1.7 8.2 0" stroke="rgba(255,255,255,.55)" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div>
+          <b>Comet Coin</b>
+          <small>Modern landing demo • animations + live price</small>
+        </div>
+      </a>
+
+      <nav class="navlinks" aria-label="Primary">
+        <a href="#features">Features</a>
+        <a href="#token">Token</a>
+        <a href="#demo">Demo</a>
+      </nav>
+
+      <div class="ctaRow">
+        <button class="btn" id="copyLinkBtn" type="button">Copy demo link</button>
+        <button class="btn primary" id="buyBtn" type="button">Buy (demo)</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="top" class="wrap">
+    <div class="hero">
+      <div class="card heroMain">
+        <div class="comet" aria-hidden="true">
+          <!-- big ambient comet (monochrome) -->
+          <svg viewBox="0 0 520 320">
+            <g class="trail" fill="none">
+              <path d="M60 200 C160 120, 260 120, 360 155 C430 180, 470 210, 500 250"
+                    stroke="rgba(255,255,255,.18)" stroke-width="18" stroke-linecap="round"/>
+              <path d="M78 206 C175 140, 265 140, 360 170 C420 190, 455 214, 495 255"
+                    stroke="rgba(255,255,255,.10)" stroke-width="10" stroke-linecap="round"/>
+              <circle cx="500" cy="255" r="26" fill="rgba(255,255,255,.16)"/>
+              <circle cx="500" cy="255" r="12" fill="rgba(255,255,255,.20)"/>
+              <circle cx="500" cy="255" r="6" fill="rgba(255,255,255,.30)"/>
+            </g>
+          </svg>
+        </div>
+
+        <div class="kicker"><span class="kdot"></span>Live Price Tracker (Simulated) • Switch to real API when ready</div>
+        <h1>Modern crypto landing, <br/>built like a product.</h1>
+        <p class="sub">
+          This is a single-file demo index page for <b>Comet Coin</b>: smooth motion, ambient space UI,
+          and a live price panel. By default, the “live price” runs on a simulated feed (no backend required).
+        </p>
+
+        <div class="heroActions">
+          <button class="btn primary" id="jumpFeatures" type="button">Explore features</button>
+          <button class="btn" id="toggleThemeBtn" type="button">Ambient mode</button>
+          <button class="btn" id="downloadBtn" type="button">Export as HTML</button>
+        </div>
+
+        <div class="hint">
+          Tip: replace the simulated feed with your real token price once it’s on a tracker (Dexscreener/Jupiter/etc.).
+          A ready-to-enable fetch function is included below.
+        </div>
+      </div>
+
+      <aside class="card side" id="demo">
+        <div class="metric">
+          <h3>Live Price</h3>
+          <div class="row">
+            <div class="price" id="price">$0.0000</div>
+            <div class="chg" id="change">+0.00%</div>
+          </div>
+          <div class="mini"><canvas id="spark"></canvas></div>
+        </div>
+
+        <div class="pillRow">
+          <div class="pill">
+            <b id="mcap">$0</b>
+            <span>Market cap (demo)</span>
+          </div>
+          <div class="pill">
+            <b id="vol">$0</b>
+            <span>24h volume (demo)</span>
+          </div>
+          <div class="pill">
+            <b id="holders">0</b>
+            <span>Holders (demo)</span>
+          </div>
+        </div>
+
+        <div class="switch">
+          <div>
+            <b style="display:block; font-size:13px; color:rgba(255,255,255,.88)">Price source</b>
+            <span style="color:rgba(255,255,255,.62)">Simulated feed ↔ Real API</span>
+          </div>
+          <div class="toggle" id="sourceToggle" role="switch" aria-checked="false" tabindex="0" title="Toggle price source"></div>
+        </div>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn" id="resetBtn" type="button" style="flex:1 1 160px;">Reset demo stats</button>
+          <button class="btn" id="pauseBtn" type="button" style="flex:1 1 160px;">Pause</button>
+        </div>
+
+        <div style="color:rgba(255,255,255,.62); font-size:12px; line-height:1.5;">
+          <b style="color:rgba(255,255,255,.85)">Note:</b> This page is a front-end demo. “Buy” buttons and stats are placeholders.
+          Swap the API endpoint when you’re ready.
+        </div>
+      </aside>
+    </div>
+
+    <section id="features">
+      <div class="tag"><span class="diamond"></span>Features</div>
+      <div class="grid3">
+        <div class="feature">
+          <h4>Motion-first UI</h4>
+          <p>Subtle parallax, comet drift, and scroll reveal to make the project feel alive without being noisy.</p>
+        </div>
+        <div class="feature">
+          <h4>Live price panel</h4>
+          <p>Runs a simulated “live feed” now, with an optional hook to fetch real prices later.</p>
+        </div>
+        <div class="feature">
+          <h4>One-file deploy</h4>
+          <p>Drop this into any host (GitHub Pages, Vercel static, Netlify) and you have a clean landing instantly.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="token">
+      <div class="tag"><span class="diamond"></span>Token UX ideas</div>
+      <div class="grid3">
+        <div class="feature">
+          <h4>Holder-gated access</h4>
+          <p>Use token gating for Discord roles (Guild.xyz / Vulcan) so holders unlock private channels.</p>
+        </div>
+        <div class="feature">
+          <h4>On-site verification</h4>
+          <p>Connect wallet → check token balance → unlock members-only pages, downloads, or perks.</p>
+        </div>
+        <div class="feature">
+          <h4>Simple roadmap UI</h4>
+          <p>Keep it honest: “Trajectory” phases, community milestones, and utility integrations over time.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div style="display:flex; gap:18px; flex-wrap:wrap; align-items:flex-start; justify-content:space-between;">
+        <div style="max-width:70ch;">
+          <b style="color:rgba(255,255,255,.78)">Comet Coin Demo</b><br/>
+          This is a UI/UX demo page. Not financial advice. Replace placeholder content and connect to real endpoints when your token is live on trackers.
+        </div>
+        <div style="min-width:240px;">
+          <b style="color:rgba(255,255,255,.78)">Quick links</b><br/>
+          <span style="display:block; margin-top:6px;">
+            <a href="#top" style="color:rgba(255,255,255,.65); text-decoration:none;">Top</a> •
+            <a href="#features" style="color:rgba(255,255,255,.65); text-decoration:none;">Features</a> •
+            <a href="#token" style="color:rgba(255,255,255,.65); text-decoration:none;">Token</a> •
+            <a href="#demo" style="color:rgba(255,255,255,.65); text-decoration:none;">Demo</a>
+          </span>
+        </div>
+      </div>
+    </footer>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    // ----------------------------
+    // Smooth anchor behavior
+    // ----------------------------
+    const smoothTo = (sel) => {
+      const el = document.querySelector(sel);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    document.getElementById("jumpFeatures").addEventListener("click", () => smoothTo("#features"));
+
+    // ----------------------------
+    // Toast helper
+    // ----------------------------
+    const toastEl = document.getElementById("toast");
+    let toastTimer = null;
+    function toast(msg){
+      toastEl.textContent = msg;
+      toastEl.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(()=>toastEl.classList.remove("show"), 2200);
+    }
+
+    // ----------------------------
+    // Buttons
+    // ----------------------------
+    document.getElementById("buyBtn").addEventListener("click", () => {
+      toast("Demo: Connect wallet / buy flow would open here.");
+    });
+
+    document.getElementById("copyLinkBtn").addEventListener("click", async () => {
+      try{
+        await navigator.clipboard.writeText(location.href);
+        toast("Copied link to clipboard.");
+      }catch{
+        toast("Couldn’t access clipboard on this device.");
+      }
+    });
+
+    document.getElementById("downloadBtn").addEventListener("click", () => {
+      // Export current HTML as a file
+      const html = "<!doctype html>\n" + document.documentElement.outerHTML;
+      const blob = new Blob([html], {type:"text/html;charset=utf-8"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "cometcoin-index-demo.html";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(a.href);
+      toast("Exported as cometcoin-index-demo.html");
+    });
+
+    // Ambient mode (slightly changes background intensity)
+    let ambientOn = true;
+    document.getElementById("toggleThemeBtn").addEventListener("click", () => {
+      ambientOn = !ambientOn;
+      document.body.style.background = ambientOn
+        ? "radial-gradient(1200px 600px at 70% 0%, rgba(255,255,255,.08), transparent 60%), radial-gradient(900px 500px at 10% 20%, rgba(255,255,255,.06), transparent 55%), var(--bg)"
+        : "radial-gradient(1000px 520px at 70% 0%, rgba(255,255,255,.05), transparent 60%), radial-gradient(860px 460px at 10% 20%, rgba(255,255,255,.04), transparent 55%), var(--bg)";
+      toast(ambientOn ? "Ambient mode: ON" : "Ambient mode: SOFT");
+    });
+
+    // ----------------------------
+    // Scroll reveal
+    // ----------------------------
+    const feats = [...document.querySelectorAll(".feature")];
+    const io = new IntersectionObserver((entries)=>{
+      entries.forEach(e=>{
+        if(e.isIntersecting) e.target.classList.add("show");
+      });
+    }, { threshold: 0.15 });
+    feats.forEach(f=>io.observe(f));
+
+    // ----------------------------
+    // Stars canvas background
+    // ----------------------------
+    const starCanvas = document.getElementById("stars");
+    const sctx = starCanvas.getContext("2d");
+    let stars = [];
+    function resizeStars(){
+      const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      starCanvas.width = Math.floor(innerWidth * dpr);
+      starCanvas.height = Math.floor(innerHeight * dpr);
+      starCanvas.style.width = innerWidth + "px";
+      starCanvas.style.height = innerHeight + "px";
+      sctx.setTransform(dpr,0,0,dpr,0,0);
+      // Rebuild stars
+      const count = Math.floor((innerWidth * innerHeight) / 14000);
+      stars = Array.from({length: count}, () => ({
+        x: Math.random() * innerWidth,
+        y: Math.random() * innerHeight,
+        r: Math.random() * 1.4 + 0.2,
+        a: Math.random() * 0.5 + 0.2,
+        tw: Math.random() * 0.02 + 0.004
+      }));
+    }
+    window.addEventListener("resize", resizeStars, {passive:true});
+    resizeStars();
+
+    let t = 0;
+    function drawStars(){
+      t += 1;
+      sctx.clearRect(0,0,innerWidth,innerHeight);
+      // Soft vignette
+      const g = sctx.createRadialGradient(innerWidth*0.5, innerHeight*0.2, 10, innerWidth*0.5, innerHeight*0.2, Math.max(innerWidth, innerHeight));
+      g.addColorStop(0, "rgba(255,255,255,.05)");
+      g.addColorStop(1, "rgba(0,0,0,0)");
+      sctx.fillStyle = g;
+      sctx.fillRect(0,0,innerWidth,innerHeight);
+
+      for(const st of stars){
+        st.a += Math.sin(t*st.tw) * 0.0025;
+        st.a = Math.max(0.12, Math.min(0.7, st.a));
+        sctx.beginPath();
+        sctx.fillStyle = `rgba(255,255,255,${st.a})`;
+        sctx.arc(st.x, st.y, st.r, 0, Math.PI*2);
+        sctx.fill();
+      }
+      requestAnimationFrame(drawStars);
+    }
+    drawStars();
+
+    // ----------------------------
+    // Price demo (simulated by default)
+    // ----------------------------
+    const priceEl = document.getElementById("price");
+    const chgEl = document.getElementById("change");
+    const mcapEl = document.getElementById("mcap");
+    const volEl = document.getElementById("vol");
+    const holdersEl = document.getElementById("holders");
+    const sourceToggle = document.getElementById("sourceToggle");
+    const spark = document.getElementById("spark");
+    const pctx = spark.getContext("2d");
+
+    let useRealAPI = false;
+    let paused = false;
+
+    // Sim state
+    let base = 0.00042;
+    let price = base;
+    let open24h = base;
+    let vol24 = 850;
+    let holders = 1;
+
+    // Sparkline history
+    const histMax = 60;
+    let hist = Array.from({length: histMax}, ()=>price);
+
+    function fmtUSD(x){
+      // keep tiny prices readable
+      if (x < 0.01) return "$" + x.toFixed(6);
+      if (x < 1) return "$" + x.toFixed(4);
+      return "$" + x.toFixed(2);
+    }
+    function fmtInt(x){
+      return "$" + Math.round(x).toLocaleString();
+    }
+
+    function drawSpark(){
+      const w = spark.clientWidth || 300;
+      const h = spark.clientHeight || 80;
+      const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      spark.width = Math.floor(w * dpr);
+      spark.height = Math.floor(h * dpr);
+      pctx.setTransform(dpr,0,0,dpr,0,0);
+
+      pctx.clearRect(0,0,w,h);
+      // bg gradient
+      const bg = pctx.createLinearGradient(0,0,0,h);
+      bg.addColorStop(0, "rgba(255,255,255,.06)");
+      bg.addColorStop(1, "rgba(255,255,255,.02)");
+      pctx.fillStyle = bg;
+      pctx.fillRect(0,0,w,h);
+
+      const min = Math.min(...hist);
+      const max = Math.max(...hist);
+      const pad = 8;
+      const span = Math.max(1e-12, max - min);
+
+      // line
+      pctx.lineWidth = 2;
+      pctx.strokeStyle = "rgba(255,255,255,.85)";
+      pctx.beginPath();
+      hist.forEach((v,i)=>{
+        const x = pad + (i/(hist.length-1))*(w - pad*2);
+        const y = h - pad - ((v - min)/span)*(h - pad*2);
+        if(i===0) pctx.moveTo(x,y); else pctx.lineTo(x,y);
+      });
+      pctx.stroke();
+
+      // glow dot at end
+      const last = hist[hist.length-1];
+      const x = pad + ((hist.length-1)/(hist.length-1))*(w - pad*2);
+      const y = h - pad - ((last - min)/span)*(h - pad*2);
+      pctx.fillStyle = "rgba(255,255,255,.95)";
+      pctx.beginPath();
+      pctx.arc(x,y,3.2,0,Math.PI*2);
+      pctx.fill();
+      pctx.fillStyle = "rgba(255,255,255,.18)";
+      pctx.beginPath();
+      pctx.arc(x,y,9,0,Math.PI*2);
+      pctx.fill();
+    }
+
+    function updateUI(){
+      const pct = ((price - open24h) / open24h) * 100;
+      priceEl.textContent = fmtUSD(price);
+      chgEl.textContent = (pct >= 0 ? "+" : "") + pct.toFixed(2) + "%";
+      chgEl.classList.toggle("up", pct >= 0);
+      chgEl.classList.toggle("down", pct < 0);
+
+      // demo market cap: pretend supply is 1B
+      const supply = 1_000_000_000;
+      const mcap = price * supply;
+      mcapEl.textContent = fmtInt(mcap);
+
+      volEl.textContent = fmtInt(vol24);
+      holdersEl.textContent = holders.toLocaleString();
+
+      drawSpark();
+    }
+
+    function stepSim(){
+      if (paused) return;
+      // small random walk with occasional impulse
+      const drift = (Math.random() - 0.5) * 0.00002;
+      const impulse = (Math.random() < 0.06) ? (Math.random() - 0.5) * 0.00010 : 0;
+      price = Math.max(0.000001, price + drift + impulse);
+
+      // volume/holders drift
+      vol24 = Math.max(0, vol24 + (Math.random() - 0.45) * 60);
+      if (Math.random() < 0.10) holders += 1;
+
+      hist.push(price);
+      if (hist.length > histMax) hist.shift();
+      updateUI();
+    }
+
+    // ----------------------------
+    // Optional REAL API hook
+    // ----------------------------
+    // Replace this with your real source once COMC is indexed somewhere.
+    // Example ideas:
+    // - Dexscreener pair endpoint (if you have a pair address)
+    // - Jupiter price API (if listed)
+    // - Birdeye (requires API key)
+    //
+    // This function is intentionally "off" by default so the page works offline.
+    async function fetchRealPrice(){
+      // TODO: Replace with your endpoint.
+      // Example pseudo:
+      // const res = await fetch("https://api.dexscreener.com/latest/dex/tokens/<TOKEN_MINT>");
+      // const json = await res.json();
+      // price = Number(json.pairs?.[0]?.priceUsd ?? price);
+      // open24h = price / (1 + (Number(json.pairs?.[0]?.priceChange?.h24 ?? 0)/100));
+      // vol24 = Number(json.pairs?.[0]?.volume?.h24 ?? vol24);
+      // holders = holders; // holders might come from another endpoint
+      //
+      // For now, we just throw to show it’s a demo:
+      throw new Error("Real API not configured.");
+    }
+
+    let interval = setInterval(()=>{
+      if (useRealAPI){
+        fetchRealPrice()
+          .then(()=>{
+            hist.push(price); if(hist.length>histMax) hist.shift();
+            updateUI();
+          })
+          .catch(()=>{
+            // Fallback to simulation if real endpoint fails
+            useRealAPI = false;
+            sourceToggle.classList.remove("on");
+            sourceToggle.setAttribute("aria-checked","false");
+            toast("Real API not set — reverted to simulated feed.");
+          });
+      } else {
+        stepSim();
+      }
+    }, 900);
+
+    // init UI
+    updateUI();
+
+    // toggle source
+    function setSource(real){
+      useRealAPI = real;
+      sourceToggle.classList.toggle("on", real);
+      sourceToggle.setAttribute("aria-checked", real ? "true" : "false");
+      toast(real ? "Price source: REAL API (configure endpoint)" : "Price source: SIMULATED");
+    }
+    sourceToggle.addEventListener("click", ()=> setSource(!useRealAPI));
+    sourceToggle.addEventListener("keydown", (e)=>{
+      if(e.key === "Enter" || e.key === " "){
+        e.preventDefault();
+        setSource(!useRealAPI);
+      }
+    });
+
+    // pause / reset
+    document.getElementById("pauseBtn").addEventListener("click", (e)=>{
+      paused = !paused;
+      e.target.textContent = paused ? "Resume" : "Pause";
+      toast(paused ? "Paused updates." : "Resumed updates.");
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", ()=>{
+      base = 0.00042;
+      price = base;
+      open24h = base;
+      vol24 = 850;
+      holders = 1;
+      hist = Array.from({length: histMax}, ()=>price);
+      updateUI();
+      toast("Reset demo stats.");
+    });
+
+    // ----------------------------
+    // Tiny “anti-pattern” safety: prevent accidental external nav from demo buttons
+    // ----------------------------
+    window.addEventListener("click", (e)=>{
+      const a = e.target.closest("a");
+      if(a && a.href && a.href.startsWith("http")){
+        // keep demo self-contained
+        // comment out if you want external links
+        e.preventDefault();
+        toast("Demo: external links disabled in this file.");
+      }
+    });
+
+  </script>
+</body>
+</html>
